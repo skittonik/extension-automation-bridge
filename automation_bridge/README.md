@@ -69,7 +69,8 @@ Common error codes include `bad_request`, `invalid_json`, `json_body_too_large`,
 `stale_scene`, `stale_element`, `unsupported_key`, `input_queue_full`, `input_too_large`, `input_controller_busy`,
 `input_device_unsupported`, `input_not_found`, `input_not_owned`, `pointer_closed`,
 `screen_resize_unsupported`, `screenshot_unsupported`, `screenshot_not_found`,
-`screenshot_pending`, `recording_unsupported`, `recording_active`,
+`screenshot_schedule_failed`, `screenshot_pending`, `recording_unsupported`,
+`recording_active`,
 `recording_inactive`, `recording_start_failed`, `recording_stop_failed`,
 `metal_capture_unsupported`, `metal_capture_active`, `metal_capture_inactive`, and
 `unsupported_capability`. The latter names a feature
@@ -338,7 +339,7 @@ curl -fsS "$BASE/element?id=e:0123456789abcdef&include=bounds,properties,childre
 
 All click, drag, path, pointer, and key actions share one FIFO. Only the first action advances during an engine update, so independent gestures cannot overwrite the same HID state. Every mutating request carries `client_id`, `session_id`, and `request_id`; keep ids compact on query endpoints because Defold bounds the complete request resource. The first client/session acquires the controller lease and other clients receive `input_controller_busy` until that lease expires. Observer endpoints remain readable without the lease.
 
-Use `PUT /input/configure?client_id=...&session_id=...&lease=5&device=auto&visualize=1` to acquire or renew control and set defaults. Devices are exclusive per gesture: `auto`, `mouse`, or `touch`. `GET /health` reports `input.device.mouse` and, on platforms where native touch injection is supported, `input.device.touch`. The public Defold HID API has no reliable connected-touch-device predicate, so explicit touch is conservatively enabled on iOS, Android, and Switch and rejected elsewhere; one gesture never injects both mouse and touch.
+Use `PUT /input/configure?client_id=...&session_id=...&lease=5&device=auto&visualize=1` to acquire or renew control and set defaults. Devices are exclusive per gesture: `auto`, `mouse`, or `touch`. `GET /health` reports `input.device.mouse` and, on platforms where native touch injection is supported, `input.device.touch`. The public Defold HID API has no reliable connected-touch-device predicate, so explicit touch is conservatively enabled on iOS and Switch and rejected elsewhere. Android uses Defold's mouse-compatible primary-pointer path because touch packets added from an extension update are cleared before the following script input dispatch; one gesture never injects both mouse and touch.
 
 When resolving an element id, pass `expected_scene_sequence` to reject a changed
 snapshot with logical status 409 `stale_scene`. Input receipts include the scene sequence
@@ -457,7 +458,8 @@ Response `data`:
 Takes `capture_id` (or `id`) and returns `pending`, `complete`, or `failed`.
 Completed receipts include capture frame/sequence, dimensions, and SHA-256. The
 PNG is first written to a temporary path and atomically renamed before `complete`
-is visible.
+is visible. On Android the path is inside the application's writable internal
+data directory.
 
 ## Native video recording (macOS and Windows)
 
