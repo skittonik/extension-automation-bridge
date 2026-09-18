@@ -2203,9 +2203,15 @@ namespace dmAutomationBridge
         uint32_t after_frames = 0;
         RequestGetUIntParamAllowZero(ctx, "after_frames", &after_frames, 600);
         ScreenshotCapture capture;
-        if (!ScheduleScreenshot(after_frames, &capture))
+        ScheduleScreenshotResult scheduled = ScheduleScreenshot(after_frames, &capture);
+        if (scheduled == SCHEDULE_SCREENSHOT_PENDING)
         {
             RequestSendError(ctx, 409, "screenshot_pending", "a screenshot is already pending");
+            return;
+        }
+        if (scheduled != SCHEDULE_SCREENSHOT_OK)
+        {
+            RequestSendError(ctx, 500, "screenshot_storage_unavailable", "no writable directory for screenshot files");
             return;
         }
 

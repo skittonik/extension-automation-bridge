@@ -14,6 +14,8 @@
 
 #if defined(_WIN32)
 #include <direct.h>
+#elif defined(DM_PLATFORM_ANDROID)
+#include <dmsdk/dlib/android.h>
 #endif
 
 namespace dmAutomationBridge
@@ -44,6 +46,11 @@ namespace dmAutomationBridge
         }
     }
 
+    // Android has no /tmp and leaves TMPDIR empty, so the generic branch below cannot
+    // produce a writable location there. The app's own internal data directory is the
+    // one place a bundle may always write, and dmsdk exposes it through the activity -
+    // preferred over dmSys::GetApplicationSupportPath, which lives in a private engine
+    // header and would have to be hand-declared to be called from an extension.
     static const char* GetTempDirectory()
     {
 #if defined(_WIN32)
@@ -52,6 +59,10 @@ namespace dmAutomationBridge
         {
             temp_dir = getenv("TMP");
         }
+#elif defined(DM_PLATFORM_ANDROID)
+        struct android_app* app = dmAndroid::GetAndroidApp();
+        ANativeActivity* activity = app ? app->activity : 0;
+        const char* temp_dir = activity ? activity->internalDataPath : 0;
 #else
         const char* temp_dir = getenv("TMPDIR");
 #endif
@@ -109,11 +120,11 @@ namespace dmAutomationBridge
         return true;
     }
 
-    bool ScheduleScreenshot(uint32_t after_frames, ScreenshotCapture* capture)
+    ScheduleScreenshotResult ScheduleScreenshot(uint32_t after_frames, ScreenshotCapture* capture)
     {
         if (g_AutomationBridge.m_Screenshot.m_State == SCREENSHOT_PENDING)
         {
-            return false;
+            return SCHEDULE_SCREENSHOT_PENDING;
         }
         if (g_AutomationBridge.m_Screenshot.m_State != SCREENSHOT_NONE)
         {
@@ -135,14 +146,17 @@ namespace dmAutomationBridge
         next.m_Height = g_AutomationBridge.m_Snapshot.m_ViewportHeight;
         if (!BuildScreenshotPath(next.m_Id, next.m_Path, sizeof(next.m_Path)))
         {
-            return false;
+            // A storage failure used to share "false" with a genuinely pending
+            // capture, so the caller reported it as 409 screenshot_pending and
+            // the real reason only ever showed up in the device log.
+            return SCHEDULE_SCREENSHOT_STORAGE_UNAVAILABLE;
         }
         g_AutomationBridge.m_Screenshot = next;
         if (capture)
         {
             *capture = next;
         }
-        return true;
+        return SCHEDULE_SCREENSHOT_OK;
     }
 
     const ScreenshotCapture* FindScreenshotCapture(uint64_t capture_id)

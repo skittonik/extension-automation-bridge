@@ -610,7 +610,13 @@ namespace dmAutomationBridge
 
     bool IsScreenshotSupported();
     bool BuildScreenshotPath(uint64_t capture_id, char* path, uint32_t path_size);
-    bool ScheduleScreenshot(uint32_t after_frames, ScreenshotCapture* capture);
+    enum ScheduleScreenshotResult
+    {
+        SCHEDULE_SCREENSHOT_OK,
+        SCHEDULE_SCREENSHOT_PENDING,
+        SCHEDULE_SCREENSHOT_STORAGE_UNAVAILABLE,
+    };
+    ScheduleScreenshotResult ScheduleScreenshot(uint32_t after_frames, ScreenshotCapture* capture);
     void ProcessPendingScreenshot();
     void AppendScreenshotJson(StringBuffer* out, const ScreenshotCapture* capture);
     const ScreenshotCapture* FindScreenshotCapture(uint64_t capture_id);
