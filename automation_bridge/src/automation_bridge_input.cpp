@@ -96,7 +96,7 @@ namespace dmAutomationBridge
         {
             return true;
         }
-#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID) || defined(DM_PLATFORM_SWITCH)
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_SWITCH)
         return device == INPUT_DEVICE_TOUCH;
 #else
         return false;
@@ -109,7 +109,7 @@ namespace dmAutomationBridge
         {
             return device;
         }
-#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID) || defined(DM_PLATFORM_SWITCH)
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_SWITCH)
         return INPUT_DEVICE_TOUCH;
 #else
         return INPUT_DEVICE_MOUSE;
