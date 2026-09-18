@@ -69,7 +69,7 @@ Common error codes include `bad_request`, `invalid_json`, `json_body_too_large`,
 `stale_scene`, `stale_element`, `unsupported_key`, `input_queue_full`, `input_too_large`, `input_controller_busy`,
 `input_device_unsupported`, `input_not_found`, `input_not_owned`, `pointer_closed`,
 `screen_resize_unsupported`, `screenshot_unsupported`, `screenshot_not_found`,
-`screenshot_schedule_failed`, `screenshot_pending`, `recording_unsupported`,
+`screenshot_storage_unavailable`, `screenshot_pending`, `recording_unsupported`,
 `recording_active`,
 `recording_inactive`, `recording_start_failed`, `recording_stop_failed`,
 `metal_capture_unsupported`, `metal_capture_active`, `metal_capture_inactive`, and
