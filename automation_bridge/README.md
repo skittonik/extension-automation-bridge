@@ -556,7 +556,7 @@ automation_bridge.emit("my_game.operation_complete", {
 })
 ```
 
-`GET /events/cursor` returns the next cursor and the oldest retained cursor. `GET /events?cursor=N&timeout_ms=10000&limit=100` long-polls for entries at or after `N`. Each event includes `sequence`, `type`, `name`, JSON `data`, engine `frame`, `native_timestamp_us`, `engine_instance_id`, and `scene_sequence`. `recording_timestamp_us` is present for recorder-correlated markers.
+`GET /events/cursor` returns the next cursor and the oldest retained cursor. `GET /events?cursor=N&limit=100` returns entries at or after `N` at once: HTTP handlers run on the engine thread, so a server-side wait would freeze the game it waits for. `timeout_ms` is still accepted and ignored; clients poll (the Python `EventStream.poll()` does). Each event includes `sequence`, `type`, `name`, JSON `data`, engine `frame`, `native_timestamp_us`, `engine_instance_id`, and `scene_sequence`. `recording_timestamp_us` is present for recorder-correlated markers.
 
 The event ring is bounded. A cursor older than `oldest_cursor` returns `overflow: true`, the retained range, and no silent cursor advancement. Clients must explicitly decide whether to fail or resubscribe.
 
@@ -569,7 +569,7 @@ automation_bridge.publish("my_game.ui", {
 })
 ```
 
-`GET /state` returns all latest values plus the global `revision`. `GET /state?name=my_game.ui` selects an exact state name. `GET /state/wait?after_revision=12&timeout_ms=10000` long-polls until a newer publication. Every state includes its own revision, frame, and native timestamp, so a wait can require a publication newer than the state it already observed.
+`GET /state` returns all latest values plus the global `revision`. `GET /state?name=my_game.ui` selects an exact state name. `GET /state/wait?after_revision=12` returns the publications newer than that revision at once, for the same reason; `timeout_ms` is accepted and ignored, and `wait_for_state()` polls. Every state includes its own revision, frame, and native timestamp, so a wait can require a publication newer than the state it already observed.
 
 ### Named commands
 

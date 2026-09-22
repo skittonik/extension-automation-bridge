@@ -29,6 +29,9 @@ from .cancellation import (
     cancellable_sleep, cancellation_active, check_cancelled,
 )
 
+# Interval between /state/wait and /events polls; the engine answers both at once.
+STATE_POLL_INTERVAL = 0.02
+
 
 JsonDict = Dict[str, Any]
 Target = Union[Element, str, Mapping[str, Any], Sequence[float]]
@@ -1716,10 +1719,15 @@ class Client:
             safe_wait = min(remaining, max(0.0, float(self.timeout) - 0.1), 1.0)
             if cancellation_active():
                 safe_wait = min(safe_wait, 0.1)
+            # The engine answers /state/wait at once (a native wait would freeze the engine
+            # thread, see HandleStateWait), so the waiting happens here, between polls.
             changed = self._request(
                 "GET", "/state/wait",
-                {"after_revision": cursor, "timeout_ms": int(safe_wait * 1000), "name": state_name},
+                {"after_revision": cursor, "timeout_ms": 0, "name": state_name},
             )
+            if int(changed.get("revision", cursor)) <= cursor:
+                time.sleep(min(safe_wait, STATE_POLL_INTERVAL))
+                continue
             cursor = max(cursor, int(changed.get("revision", cursor)))
             changed_entries = [item for item in changed.get("states", []) if isinstance(item, Mapping)]
             candidate = select_state_path(changed_entries, path, state_name=state_name)

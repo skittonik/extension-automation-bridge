@@ -1,5 +1,6 @@
 """Typed event, state, and command synchronization primitives."""
 
+import time
 from dataclasses import dataclass
 from typing import Any, List, Mapping, Optional, TYPE_CHECKING, Union
 from .cancellation import cancellation_active, check_cancelled
@@ -122,10 +123,18 @@ class EventStream:
         safe_wait = min(timeout, max(0.0, float(self.client.timeout) - 0.1), 30.0)
         if cancellation_active():
             safe_wait = min(safe_wait, 0.1)
-        data = self.client.request(
-            "GET", "/events",
-            params={"cursor": self.cursor, "timeout_ms": int(safe_wait * 1000), "limit": limit},
-        )
+        # The engine answers /events at once (a native wait would freeze the engine
+        # thread, see HandleEvents), so the long poll is emulated here.
+        deadline = time.monotonic() + safe_wait
+        while True:
+            data = self.client.request(
+                "GET", "/events",
+                params={"cursor": self.cursor, "timeout_ms": 0, "limit": limit},
+            )
+            if data.get("events") or data.get("overflow") or time.monotonic() >= deadline:
+                break
+            check_cancelled()
+            time.sleep(min(0.02, max(0.0, deadline - time.monotonic())))
         if data.get("overflow"):
             raise EventBufferOverflow(
                 requested_cursor=self.cursor,

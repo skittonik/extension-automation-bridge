@@ -2443,19 +2443,16 @@ namespace dmAutomationBridge
             return;
         }
 
-        uint64_t deadline = dmTime::GetTime() + timeout_ms_64 * 1000;
+        // The engine service runs its HTTP handlers on the engine thread, between frames.
+        // Sleeping here froze the game for the whole timeout: no frame ran, so no new
+        // entry could ever arrive and every wait ended by timing out (measured: 5 frames
+        // in 3 s instead of ~480). timeout_ms is still validated for compatibility, but the
+        // handler answers at once; clients wait by polling (automation-bridge-python does).
         StringBuffer page;
-        uint32_t count = 0;
         bool overflow = false;
         uint64_t next_cursor = cursor;
-        do
-        {
-            StringBufferInit(&page);
-            count = AppendEventPageJson(&page, cursor, (uint32_t)limit_64, &overflow, &next_cursor);
-            if (count || overflow || dmTime::GetTime() >= deadline) break;
-            StringBufferFree(&page);
-            dmTime::Sleep(10000);
-        } while (true);
+        StringBufferInit(&page);
+        AppendEventPageJson(&page, cursor, (uint32_t)limit_64, &overflow, &next_cursor);
 
         StringBuffer response;
         StringBufferInit(&response);
@@ -2533,17 +2530,10 @@ namespace dmAutomationBridge
             RequestSendError(ctx, 400, "bad_timeout", "timeout_ms must be between 0 and 30000");
             return;
         }
-        uint64_t deadline = dmTime::GetTime() + timeout_ms * 1000;
+        // Same as HandleEvents: waiting here would freeze the engine thread, so answer at once.
         StringBuffer page;
-        uint32_t count = 0;
-        do
-        {
-            StringBufferInit(&page);
-            count = AppendPublishedStatesJson(&page, RequestGetParam(ctx, "name"), after_revision);
-            if (count || dmTime::GetTime() >= deadline) break;
-            StringBufferFree(&page);
-            dmTime::Sleep(10000);
-        } while (true);
+        StringBufferInit(&page);
+        AppendPublishedStatesJson(&page, RequestGetParam(ctx, "name"), after_revision);
         StringBuffer response;
         StringBufferInit(&response);
         StringBufferAppend(&response, "{\"ok\":true,\"data\":");
