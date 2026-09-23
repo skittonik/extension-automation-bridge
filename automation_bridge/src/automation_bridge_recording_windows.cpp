@@ -256,14 +256,15 @@ namespace dmAutomationBridge
             result = m_Session->StartCapture();
             if (FAILED(result)) return Fail(result, failure, failure_size);
 
-            DWORD wait_result = WaitForSingleObject(m_FirstFrameEvent, 15000);
-            if (wait_result != WAIT_OBJECT_0)
-            {
-                CopyText(failure, failure_size, "timed out waiting for the first Windows capture frame");
-                return false;
-            }
+            // The first frame is NOT waited for here. This runs on the engine thread,
+            // inside the HTTP handler, and Windows Graphics Capture only hands out a frame
+            // once the window presents - which a blocked engine never does. The wait
+            // therefore always ran out its 15 s and every start failed with "timed out
+            // waiting for the first Windows capture frame" (2026-09-23). Capture is live
+            // when StartCapture() succeeds; a caller that wants frame evidence reads
+            // frame_count from /recording/status or from the metadata stop() returns.
             EnterCriticalSection(&m_FrameLock);
-            bool ok = m_Failure[0] == 0 && m_FrameCount > 0;
+            bool ok = m_Failure[0] == 0;
             CopyText(failure, failure_size, m_Failure);
             LeaveCriticalSection(&m_FrameLock);
             return ok;

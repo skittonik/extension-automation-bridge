@@ -485,7 +485,11 @@ Windows backend is currently video-only; `audio=true` returns
 - `POST /recording/start` accepts `path`, optional paired `width` and `height`,
   integer `fps` from 1 through 60 (default 30), and boolean `audio` (default
   true on macOS and false on Windows). It automatically selects a window owned
-  by the current process.
+  by the current process. It returns as soon as capture is live and does not wait
+  for the first frame: on Windows that wait happened on the engine thread, which
+  then could not present the window the capture takes its frames from. Read
+  `frame_count` from `/recording/status` or from the stop metadata for evidence
+  that frames were actually written.
 - `POST /recording/stop` stops capture and waits until the MP4 is finalized.
 
 ```sh
