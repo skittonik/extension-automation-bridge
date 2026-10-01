@@ -396,6 +396,15 @@ namespace dmAutomationBridge
             if (FAILED(result)) return result;
             result = m_FramePool->CreateCaptureSession(m_Item.Get(), &m_Session);
             if (FAILED(result)) return result;
+            // The system cursor is the person's at the desk, not the game's: Windows Graphics
+            // Capture draws it into every frame by default, and store videos recorded while
+            // someone worked at the machine carried a mouse arrow (2026-10-02). macOS already
+            // sets ShowsCursor NO. Windows 10 2004+; an older system records it as before.
+            ComPtr<CaptureAbi::IGraphicsCaptureSession2> session2;
+            if (SUCCEEDED(m_Session.As(&session2)))
+            {
+                session2->put_IsCursorCaptureEnabled(false);
+            }
             ComPtr<AgileFrameArrivedHandler> frame_handler =
                 Microsoft::WRL::Make<AgileFrameArrivedHandler>();
             if (!frame_handler) return E_OUTOFMEMORY;
