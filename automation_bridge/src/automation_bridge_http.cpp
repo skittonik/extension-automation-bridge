@@ -2644,9 +2644,9 @@ namespace dmAutomationBridge
         StringBufferAppend(&response, "{\"ok\":true,\"data\":{\"event_sequence\":");
         AppendNumber(&response, (double)event_sequence);
         StringBufferAppend(&response, ",\"name\":"); AppendJsonString(&response, name);
-        StringBufferAppend(&response, ",\"native_timestamp_us\":"); AppendNumber(&response, (double)native_timestamp_us);
+        StringBufferAppend(&response, ",\"native_timestamp_us\":"); AppendTimestamp(&response, native_timestamp_us);
         StringBufferAppend(&response, ",\"recording_timestamp_us\":");
-        if (has_recording_timestamp) AppendNumber(&response, (double)recording_timestamp_us); else StringBufferAppend(&response, "null");
+        if (has_recording_timestamp) AppendTimestamp(&response, recording_timestamp_us); else StringBufferAppend(&response, "null");
         StringBufferAppend(&response, "}}\n");
         RequestSendJson(ctx, 200, &response);
     }

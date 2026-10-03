@@ -4254,6 +4254,24 @@ class AutomationBridgeApiTest(unittest.TestCase):
         self.assertTrue(result["result"]["rejected"])
         self.assertEqual(before, self.bridge.application_catalog().revision)
 
+    def test_marker_timestamps_keep_every_microsecond(self):
+        # Printed with %.9g these came back in steps of about 10 s: two markers 50 ms apart
+        # shared one native time and the recording time lost its last seven digits.
+        self.ensure_running_bridge()
+        recording_us = 1_759_891_234_567_891
+        with self.bridge.events("now") as events:
+            first = self.bridge.mark("bridge_test.timestamp", {"n": 1}, recording_timestamp_us=recording_us)
+            time.sleep(0.05)
+            self.bridge.mark("bridge_test.timestamp", {"n": 2}, recording_timestamp_us=recording_us + 1)
+            first_event = events.wait("bridge_test.timestamp", where={"n": 1}, event_type="marker")
+            second_event = events.wait("bridge_test.timestamp", where={"n": 2}, event_type="marker")
+        self.assertEqual(recording_us, first["recording_timestamp_us"])
+        self.assertEqual(first["native_timestamp_us"], first_event.raw["native_timestamp_us"])
+        self.assertEqual(recording_us + 1, second_event.raw["recording_timestamp_us"])
+        apart = second_event.raw["native_timestamp_us"] - first_event.raw["native_timestamp_us"]
+        self.assertGreaterEqual(apart, 50_000)
+        self.assertLess(apart, 5_000_000)
+
     def test_session_ownership_and_detach_leave_engine_available(self):
         if self.editor is not None:
             self.bridge = self.editor.build_and_run(timeout=20, client_id="owner", session_id="lifecycle-test")

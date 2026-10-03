@@ -371,6 +371,15 @@ namespace dmAutomationBridge
         return g_AutomationBridge.m_Events.m_Count ? g_AutomationBridge.m_Events.m_Data[0].m_Sequence : g_AutomationBridge.m_NextEventSequence;
     }
 
+    // Microsecond timestamps (~1.8e15 since the epoch) need every digit: AppendNumber's %.9g
+    // rounds them to steps of about 10 seconds.
+    static void AppendUInt64(StringBuffer* out, uint64_t value)
+    {
+        char buffer[32];
+        dmSnPrintf(buffer, sizeof(buffer), "%llu", (unsigned long long)value);
+        StringBufferAppend(out, buffer);
+    }
+
     static void AppendBridgeEventJson(StringBuffer* out, const BridgeEvent* event)
     {
         StringBufferAppend(out, "{\"sequence\":");
@@ -379,9 +388,9 @@ namespace dmAutomationBridge
         StringBufferAppend(out, ",\"name\":"); AppendJsonString(out, event->m_Name);
         StringBufferAppend(out, ",\"data\":"); StringBufferAppend(out, event->m_DataJson);
         StringBufferAppend(out, ",\"frame\":"); AppendNumber(out, (double)event->m_Frame);
-        StringBufferAppend(out, ",\"native_timestamp_us\":"); AppendNumber(out, (double)event->m_NativeTimestampUs);
+        StringBufferAppend(out, ",\"native_timestamp_us\":"); AppendUInt64(out, event->m_NativeTimestampUs);
         StringBufferAppend(out, ",\"recording_timestamp_us\":");
-        if (event->m_HasRecordingTimestamp) AppendNumber(out, (double)event->m_RecordingTimestampUs); else StringBufferAppend(out, "null");
+        if (event->m_HasRecordingTimestamp) AppendUInt64(out, event->m_RecordingTimestampUs); else StringBufferAppend(out, "null");
         StringBufferAppend(out, ",\"engine_instance_id\":"); AppendJsonString(out, g_AutomationBridge.m_EngineInstanceId);
         StringBufferAppend(out, ",\"scene_sequence\":"); AppendNumber(out, (double)event->m_SceneSequence);
         StringBufferAppendChar(out, '}');
@@ -481,7 +490,7 @@ namespace dmAutomationBridge
             StringBufferAppend(out, ",\"value\":"); StringBufferAppend(out, state->m_ValueJson);
             StringBufferAppend(out, ",\"revision\":"); AppendNumber(out, (double)state->m_Revision);
             StringBufferAppend(out, ",\"frame\":"); AppendNumber(out, (double)state->m_Frame);
-            StringBufferAppend(out, ",\"native_timestamp_us\":"); AppendNumber(out, (double)state->m_NativeTimestampUs);
+            StringBufferAppend(out, ",\"native_timestamp_us\":"); AppendUInt64(out, state->m_NativeTimestampUs);
             StringBufferAppendChar(out, '}');
             ++count;
         }
@@ -619,9 +628,9 @@ namespace dmAutomationBridge
         StringBufferAppend(out, "{\"command_id\":"); AppendNumber(out, (double)command->m_Id);
         StringBufferAppend(out, ",\"name\":"); AppendJsonString(out, command->m_Name);
         StringBufferAppend(out, ",\"state\":"); AppendJsonString(out, CommandStateName(command->m_State));
-        StringBufferAppend(out, ",\"accepted_timestamp_us\":"); AppendNumber(out, (double)command->m_AcceptedTimestampUs);
+        StringBufferAppend(out, ",\"accepted_timestamp_us\":"); AppendUInt64(out, command->m_AcceptedTimestampUs);
         StringBufferAppend(out, ",\"completed_timestamp_us\":");
-        if (command->m_CompletedTimestampUs) AppendNumber(out, (double)command->m_CompletedTimestampUs); else StringBufferAppend(out, "null");
+        if (command->m_CompletedTimestampUs) AppendUInt64(out, command->m_CompletedTimestampUs); else StringBufferAppend(out, "null");
         StringBufferAppend(out, ",\"result\":");
         if (command->m_ResultJson) StringBufferAppend(out, command->m_ResultJson); else StringBufferAppend(out, "null");
         StringBufferAppend(out, ",\"error\":");
