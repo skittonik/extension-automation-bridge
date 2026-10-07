@@ -436,7 +436,8 @@ namespace dmAutomationBridge
             return false;
         }
         event->m_Receipt.m_RequestedDuration += point->m_Duration;
-        if (event->m_Phase == 4)
+        // Phase 3 too: a move can arrive in the update between the press and the wait.
+        if (event->m_Phase == 4 || (event->m_Phase == 3 && event->m_Pressed))
         {
             event->m_Segment = previous_count - 1;
             event->m_Elapsed = 0.0f;
@@ -890,10 +891,18 @@ namespace dmAutomationBridge
             return true;
         }
 
+        // A held pointer is re-asserted on every update it stays down, as held keys are:
+        // the engine's HID update re-reads the OS mouse each frame, and a real cursor moving
+        // over the window replaced the injected press with its own position and an up
+        // button, so the game saw a press and a release one frame apart.
         if (event->m_Phase == 1)
         {
             event->m_Elapsed += dt;
-            if (event->m_Elapsed < event->m_HoldBefore) return false;
+            if (event->m_Elapsed < event->m_HoldBefore)
+            {
+                InjectPointer(event, first->m_X, first->m_Y, false, false, false);
+                return false;
+            }
             event->m_Elapsed = 0.0f;
             event->m_Phase = event->m_Points.m_Count > 1 ? 2 : 3;
         }
@@ -922,11 +931,22 @@ namespace dmAutomationBridge
             event->m_Phase = event->m_PointerOpen ? 4 : 3;
         }
 
-        if (event->m_Phase == 4 && !event->m_ReleaseRequested) return false;
+        // An open pointer that has played every point waits in phase 4, where the next
+        // move or hold picks it up; a one-point session reaches here in phase 3.
+        if (event->m_Phase == 3 && event->m_PointerOpen) event->m_Phase = 4;
+        if (event->m_Phase == 4 && !event->m_ReleaseRequested)
+        {
+            InjectPointer(event, last->m_X, last->m_Y, false, false, false);
+            return false;
+        }
         if (event->m_Phase == 3 && event->m_HoldAfter > 0.0f)
         {
             event->m_Elapsed += dt;
-            if (event->m_Elapsed < event->m_HoldAfter) return false;
+            if (event->m_Elapsed < event->m_HoldAfter)
+            {
+                InjectPointer(event, last->m_X, last->m_Y, false, false, false);
+                return false;
+            }
         }
         if (event->m_PointerOpen && !event->m_ReleaseRequested) return false;
 
